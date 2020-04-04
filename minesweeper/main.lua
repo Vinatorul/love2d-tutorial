@@ -1,7 +1,7 @@
 function love.load()
     fieldWidth = 20
     fieldHeight = 15
-    totalBombs = 50
+    totalBombs = 10
     field = {}
     for y = 1, fieldHeight do
         field[y] = {}
@@ -54,11 +54,22 @@ function love.load()
                 end
             end
         end 
+        for y = 1, fieldHeight do
+            for x = 1, fieldWidth do
+                if field[y][x].type > 0 then
+                    totalNumbers = totalNumbers + 1
+                end
+            end
+        end
+        startTime = love.timer.getTime()
     end
 
     gameOver = false
+    gameOverTime = 0
     fieldGenerated = false
     flagsCounter = 0
+    totalNumbers = 0
+    numbersOpened = 0
 end
 
 function love.draw()
@@ -114,9 +125,20 @@ function love.draw()
             draw_cell(x, y, field[y][x])
         end
     end
+    love.graphics.setColor(0.9, 0.9, 0.9)
     love.graphics.setNewFont(32)
     love.graphics.print("Bombs: "..totalBombs, 615, 100)
     love.graphics.print("Flags: "..flagsCounter, 615, 150)
+    if fieldGenerated then
+        if gameOver then
+            diff = gameOverTime - startTime
+        else 
+            diff = love.timer.getTime() - startTime
+        end
+        seconds = math.ceil(diff % 60)
+        minutes = math.floor(diff / 60)
+        love.graphics.print(minutes..":"..seconds, 615, 200)
+    end
 end
 
 function love.update(dt)
@@ -127,6 +149,11 @@ function love.update(dt)
 end
 
 function love.mousereleased(mouseX, mouseY, button)
+    local function setGameOver()
+        gameOver = true
+        gameOverTime = love.timer.getTime()
+    end
+
     local function dfs(cellX, cellY)
         for y = -1, 1 do
             for x = -1, 1 do
@@ -135,13 +162,18 @@ function love.mousereleased(mouseX, mouseY, button)
                 if checkPosition(tempX, tempY) and
                    field[tempY][tempX].subType == 0 then
                     if field[tempY][tempX].type == -1 then
-                        gameOver = true
+                        setGameOver()
                         field[tempY][tempX].subType = 4
                     else
                         field[tempY][tempX].subType = 1
                     end
                     if field[tempY][tempX].type == 0 then
                         dfs(tempX, tempY)
+                    elseif field[tempY][tempX].type > 0 then
+                        numbersOpened = numbersOpened + 1
+                        if numbersOpened == totalNumbers then
+                            setGameOver()
+                        end
                     end
                 end
             end
@@ -173,12 +205,17 @@ function love.mousereleased(mouseX, mouseY, button)
                 local cell = field[currentY][currentX]
                 if cell.subType == 0 then
                     if cell.type == -1 then
-                        gameOver = true
+                        setGameOver()
                         cell.subType = 4
                     else
                         cell.subType = 1
                         if cell.type == 0 then
                             dfs(currentX, currentY)
+                        elseif cell.type > 0 then
+                            numbersOpened = numbersOpened + 1
+                            if numbersOpened == totalNumbers then
+                                setGameOver()
+                            end
                         end
                     end
                 end
